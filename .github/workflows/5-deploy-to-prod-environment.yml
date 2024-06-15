@@ -18,7 +18,7 @@ env:
   AZURE_WEBAPP_NAME: glendonr-ttt-app
   AZURE_RESOURCE_GROUP: myResourceGroup
   AZURE_APP_PLAN: myAppServicePlan
-  AZURE_LOCATION: "East US"
+  AZURE_LOCATION: eastus
   ###############################################
 
 jobs:
