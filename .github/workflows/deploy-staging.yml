@@ -52,7 +52,7 @@ jobs:
         with:
           registry: ${{ env.IMAGE_REGISTRY_URL }}
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ secrets.GHCR_PAT }}
 
       - name: Extract metadata (tags, labels) for Docker
         id: meta
@@ -61,7 +61,6 @@ jobs:
           images: ${{env.IMAGE_REGISTRY_URL}}/${{ github.repository }}/${{env.DOCKER_IMAGE_NAME}}
           tags: |
             type=sha,format=long,prefix=
-
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
@@ -86,7 +85,7 @@ jobs:
         with:
           login-server: ${{env.IMAGE_REGISTRY_URL}}
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ secrets.GHCR_PAT }}
 
       - name: Deploy web app container
         uses: azure/webapps-deploy@v3
