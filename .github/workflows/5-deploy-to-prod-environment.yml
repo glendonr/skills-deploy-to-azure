@@ -5,6 +5,10 @@ on:
     branches:
       - main
 
+permissions:
+  id-token: write
+  contents: read
+
 env:
   IMAGE_REGISTRY_URL: ghcr.io
   ###############################################
@@ -12,6 +16,9 @@ env:
   ###############################################
   DOCKER_IMAGE_NAME: glendonr-azure-ttt
   AZURE_WEBAPP_NAME: glendonr-ttt-app
+  AZURE_RESOURCE_GROUP: myResourceGroup
+  AZURE_APP_PLAN: myAppServicePlan
+  AZURE_LOCATION: eastus
   ###############################################
 
 jobs:
@@ -51,16 +58,15 @@ jobs:
         with:
           registry: ${{ env.IMAGE_REGISTRY_URL }}
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ secrets.GHCR_PAT }}
 
       - name: Extract metadata (tags, labels) for Docker
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{env.IMAGE_REGISTRY_URL}}/${{ github.repository }}/${{env.DOCKER_IMAGE_NAME}}
+          images: ${{ env.IMAGE_REGISTRY_URL }}/${{ github.repository }}/${{ env.DOCKER_IMAGE_NAME }}
           tags: |
             type=sha,format=long,prefix=
-
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
@@ -79,17 +85,32 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - uses: azure/docker-login@v1
+      - name: Create resource group if it does not exist
+        run: |
+          az group create --name ${{ env.AZURE_RESOURCE_GROUP }} --location ${{ env.AZURE_LOCATION }}
+
+      - name: Create app service plan if it does not exist
+        run: |
+          az appservice plan show --name ${{ env.AZURE_APP_PLAN }} --resource-group ${{ env.AZURE_RESOURCE_GROUP }} || \
+          az appservice plan create --name ${{ env.AZURE_APP_PLAN }} --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --sku B1 --is-linux
+
+      - name: Create web app if it does not exist
+        run: |
+          az webapp show --name ${{ env.AZURE_WEBAPP_NAME }} --resource-group ${{ env.AZURE_RESOURCE_GROUP }} || \
+          az webapp create --name ${{ env.AZURE_WEBAPP_NAME }} --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --plan ${{ env.AZURE_APP_PLAN }} --deployment-container-image-name ${{ env.IMAGE_REGISTRY_URL }}/glendonr/skills-deploy-to-azure/${{ env.DOCKER_IMAGE_NAME }}:latest
+
+      - name: Log in to GHCR
+        uses: azure/docker-login@v1
         with:
-          login-server: ${{env.IMAGE_REGISTRY_URL}}
+          login-server: ${{ env.IMAGE_REGISTRY_URL }}
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ secrets.GHCR_PAT }}
 
       - name: Deploy web app container
         uses: azure/webapps-deploy@v3
         with:
-          app-name: ${{env.AZURE_WEBAPP_NAME}}
-          images: ${{env.IMAGE_REGISTRY_URL}}/${{ github.repository }}/${{env.DOCKER_IMAGE_NAME}}:${{github.sha}}
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          images: ${{ env.IMAGE_REGISTRY_URL }}/${{ github.repository }}/${{ env.DOCKER_IMAGE_NAME }}:${{ github.sha }}
 
       - name: Azure logout via Azure CLI
         uses: azure/CLI@v2
