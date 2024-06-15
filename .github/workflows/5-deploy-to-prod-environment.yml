@@ -99,6 +99,23 @@ jobs:
           az webapp show --name ${{ env.AZURE_WEBAPP_NAME }} --resource-group ${{ env.AZURE_RESOURCE_GROUP }} || \
           az webapp create --name ${{ env.AZURE_WEBAPP_NAME }} --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --plan ${{ env.AZURE_APP_PLAN }} --deployment-container-image-name ${{ env.IMAGE_REGISTRY_URL }}/glendonr/skills-deploy-to-azure/${{ env.DOCKER_IMAGE_NAME }}:latest
 
-      - uses: azure/docker-login@v1
+      - name: Log in to GHCR
+        uses: azure/docker-login@v1
         with:
-  
+          login-server: ${{ env.IMAGE_REGISTRY_URL }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_PAT }}
+
+      - name: Deploy web app container
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          images: ${{ env.IMAGE_REGISTRY_URL }}/${{ github.repository }}/${{ env.DOCKER_IMAGE_NAME }}:${{ github.sha }}
+
+      - name: Azure logout via Azure CLI
+        uses: azure/CLI@v2
+        with:
+          inlineScript: |
+            az logout
+            az cache purge
+            az account clear
