@@ -100,7 +100,7 @@ jobs:
           az webapp create --name ${{ env.AZURE_WEBAPP_NAME }} --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --plan ${{ env.AZURE_APP_PLAN }} --deployment-container-image-name ${{ env.IMAGE_REGISTRY_URL }}/glendonr/skills-deploy-to-azure/${{ env.DOCKER_IMAGE_NAME }}:latest
 
       - name: Log in to GHCR
-        uses: azure/docker-login@v1
+        uses: azure/docker-login@v2
         with:
           login-server: ${{ env.IMAGE_REGISTRY_URL }}
           username: ${{ github.actor }}
